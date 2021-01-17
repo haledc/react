@@ -520,6 +520,7 @@ export function resetHooksAfterThrow(): void {
 }
 
 function mountWorkInProgressHook(): Hook {
+  // ! 注意，单个 hook 是以对象的形式存在的
   const hook: Hook = {
     memoizedState: null,
 
@@ -532,11 +533,14 @@ function mountWorkInProgressHook(): Hook {
 
   if (workInProgressHook === null) {
     // This is the first hook in the list
+    // ! 这行代码每个 React 版本不太一样，但做的都是同一件事：将 hook 作为链表的头节点处理
     currentlyRenderingFiber.memoizedState = workInProgressHook = hook;
   } else {
     // Append to the end of the list
+    // ! 若链表不为空，则将 hook 追加到链表尾部
     workInProgressHook = workInProgressHook.next = hook;
   }
+  // ! 返回当前的 hook
   return workInProgressHook;
 }
 
@@ -1104,18 +1108,23 @@ function updateMutableSource<Source, Snapshot>(
 function mountState<S>(
   initialState: (() => S) | S,
 ): [S, Dispatch<BasicStateAction<S>>] {
+  // ! 将新的 hook 对象追加进链表尾部
   const hook = mountWorkInProgressHook();
+  // ! initialState 可以是一个回调，若是回调，则取回调执行后的值
   if (typeof initialState === 'function') {
     // $FlowFixMe: Flow doesn't like mixed types
     initialState = initialState();
   }
+  // ! 将 initialState 作为一个“记忆值”存下来
   hook.memoizedState = hook.baseState = initialState;
+  // ! 创建当前 hook 对象的更新队列，这一步主要是为了能够依序保留 dispatch
   const queue = (hook.queue = {
     pending: null,
     dispatch: null,
     lastRenderedReducer: basicStateReducer,
     lastRenderedState: (initialState: any),
   });
+  // ! dispatch 是由上下文中一个叫 dispatchAction 的方法创建的
   const dispatch: Dispatch<
     BasicStateAction<S>,
   > = (queue.dispatch = (dispatchAction.bind(
@@ -1123,6 +1132,7 @@ function mountState<S>(
     currentlyRenderingFiber,
     queue,
   ): any));
+  // ! 返回目标数组，dispatch 其实就是示例中常常见到的 setXXX 这个函数
   return [hook.memoizedState, dispatch];
 }
 
