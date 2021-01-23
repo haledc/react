@@ -793,8 +793,10 @@ function completeWork(
   workInProgress: Fiber,
   renderLanes: Lanes,
 ): Fiber | null {
+  // ! 取出 Fiber 节点的属性值，存储在 newProps 里
   const newProps = workInProgress.pendingProps;
 
+  // ! 根据 workInProgress 节点的 tag 属性的不同，决定要进入哪段逻辑
   switch (workInProgress.tag) {
     case IndeterminateComponent:
     case LazyComponent:

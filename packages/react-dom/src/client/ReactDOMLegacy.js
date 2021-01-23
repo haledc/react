@@ -186,15 +186,20 @@ function legacyRenderSubtreeIntoContainer(
 
   // TODO: Without `any` type, Flow says "Property cannot be accessed on any
   // member of intersection type." Whyyyyyy.
+  // ! container 对应的是我们传入的真实 DOM 对象
   let root: RootType = (container._reactRootContainer: any);
+  // ! 初始化 fiberRoot 对象
   let fiberRoot;
   if (!root) {
     // Initial mount
+    // ! 若 root 为空，则初始化 _reactRootContainer，并将其值赋值给 root
     root = container._reactRootContainer = legacyCreateRootFromDOMContainer(
       container,
       forceHydrate,
     );
+    // ! legacyCreateRootFromDOMContainer 创建出的对象会有一个 _internalRoot 属性，将其赋值给 fiberRoot
     fiberRoot = root._internalRoot;
+    // ! 这里处理的是 ReactDOM.render 入参中的回调函数
     if (typeof callback === 'function') {
       const originalCallback = callback;
       callback = function() {
@@ -203,10 +208,12 @@ function legacyRenderSubtreeIntoContainer(
       };
     }
     // Initial mount should not be batched.
+    // ! 进入 unbatchedUpdates 方法
     unbatchedUpdates(() => {
       updateContainer(children, fiberRoot, parentComponent, callback);
     });
   } else {
+    // ! else 逻辑处理的是非首次渲染的情况（即更新），其逻辑除了跳过了初始化工作，与楼上基本一致
     fiberRoot = root._internalRoot;
     if (typeof callback === 'function') {
       const originalCallback = callback;

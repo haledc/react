@@ -260,6 +260,7 @@ export function reconcileChildren(
     // won't update its child set by applying minimal side-effects. Instead,
     // we will add them all to the child before it gets rendered. That means
     // we can optimize this reconciliation pass by not tracking side-effects.
+    // ! 若 current 为 null，则进入 mountChildFibers 的逻辑
     workInProgress.child = mountChildFibers(
       workInProgress,
       null,
@@ -273,6 +274,7 @@ export function reconcileChildren(
 
     // If we had any progressed work already, that is invalid at this point so
     // let's throw it out.
+    // ! 若 current 不为 null，则进入 reconcileChildFibers 的逻辑
     workInProgress.child = reconcileChildFibers(
       workInProgress,
       current.child,
@@ -3238,10 +3240,13 @@ function beginWork(
     }
   }
 
+  //  ! current 节点不为空的情况下，会加一道辨识，看看是否有更新逻辑要处理
   if (current !== null) {
+    // ! 获取新旧 props
     const oldProps = current.memoizedProps;
     const newProps = workInProgress.pendingProps;
 
+    // ! 若 props 更新或者上下文改变，则认为需要"接受更新"
     if (
       oldProps !== newProps ||
       hasLegacyContextChanged() ||
@@ -3250,7 +3255,7 @@ function beginWork(
     ) {
       // If props or context changed, mark the fiber as having performed work.
       // This may be unset if the props are determined to be equal later (memo).
-      didReceiveUpdate = true;
+      didReceiveUpdate = true; // ! 打个更新标
     } else if (!includesSomeLane(renderLanes, updateLanes)) {
       didReceiveUpdate = false;
       // This fiber does not have any pending work. Bailout without entering
@@ -3440,6 +3445,7 @@ function beginWork(
           break;
         }
       }
+      // ! 不需要更新的情况
       return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
     } else {
       if ((current.flags & ForceUpdateForLegacySuspense) !== NoFlags) {
@@ -3451,7 +3457,7 @@ function beginWork(
         // nor legacy context. Set this to false. If an update queue or context
         // consumer produces a changed value, it will set this to true. Otherwise,
         // the component will assume the children have not changed and bail out.
-        didReceiveUpdate = false;
+        didReceiveUpdate = false; // ! 不需要更新的其他情况，这里我们的首次渲染就将执行到这一行的逻辑
       }
     }
   } else {
@@ -3465,6 +3471,7 @@ function beginWork(
   // move this assignment out of the common path and into each branch.
   workInProgress.lanes = NoLanes;
 
+  // ! 根据 tag 属性的不同，调用不同的节点创建函数
   switch (workInProgress.tag) {
     case IndeterminateComponent: {
       return mountIndeterminateComponent(
@@ -3514,10 +3521,13 @@ function beginWork(
         renderLanes,
       );
     }
+    // ! 根节点
     case HostRoot:
       return updateHostRoot(current, workInProgress, renderLanes);
+    // ! dom 标签对应的节点
     case HostComponent:
       return updateHostComponent(current, workInProgress, renderLanes);
+    // ! 文本节点
     case HostText:
       return updateHostText(current, workInProgress);
     case SuspenseComponent:

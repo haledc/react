@@ -262,6 +262,7 @@ function resolveLazy(lazyType) {
 // a compiler or we can do it manually. Helpers that don't need this branching
 // live outside of this function.
 function ChildReconciler(shouldTrackSideEffects) {
+  // ! 删除节点的逻辑
   function deleteChild(returnFiber: Fiber, childToDelete: Fiber): void {
     if (!shouldTrackSideEffects) {
       // Noop.
@@ -340,6 +341,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     return clone;
   }
 
+  // ! 插入节点的逻辑
   function placeChild(
     newFiber: Fiber,
     lastPlacedIndex: number,
@@ -368,6 +370,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     }
   }
 
+  // ! 单个节点的插入逻辑
   function placeSingleChild(newFiber: Fiber): Fiber {
     // This is simpler for the single child case. We only need to do a
     // placement for inserting new children.
@@ -747,6 +750,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     return knownKeys;
   }
 
+  // ! 处理不止一个子节点的情况
   function reconcileChildrenArray(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
@@ -1228,6 +1232,7 @@ function ChildReconciler(shouldTrackSideEffects) {
   // This API will tag the children with the side-effect of the reconciliation
   // itself. They will be added to the side-effect list as we pass through the
   // children and the parent.
+  // ! 负责处理具体的 reconcile 逻辑
   function reconcileChildFibers(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
@@ -1362,6 +1367,7 @@ function ChildReconciler(shouldTrackSideEffects) {
     return deleteRemainingChildren(returnFiber, currentFirstChild);
   }
 
+  // ! 将总的 reconcileChildFibers 函数返回
   return reconcileChildFibers;
 }
 

@@ -392,6 +392,7 @@ export function getCurrentTime() {
 export function requestUpdateLane(fiber: Fiber): Lane {
   // Special cases
   const mode = fiber.mode;
+  // ! 结合 mode 属性判断当前的
   if ((mode & BlockingMode) === NoMode) {
     return (SyncLane: Lane);
   } else if ((mode & ConcurrentMode) === NoMode) {
@@ -739,6 +740,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   if (newCallbackPriority === SyncLanePriority) {
     // Special case: Sync React callbacks are scheduled on a special
     // internal queue
+    // ! 同步更新的 render 入口
     newCallbackNode = scheduleSyncCallback(
       performSyncWorkOnRoot.bind(null, root),
     );
@@ -748,9 +750,11 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
       performSyncWorkOnRoot.bind(null, root),
     );
   } else {
+    // ! 将当前任务的 lane 优先级转换为 scheduler 可理解的优先级
     const schedulerPriorityLevel = lanePriorityToSchedulerPriority(
       newCallbackPriority,
     );
+    // ! 异步更新的 render 入口
     newCallbackNode = scheduleCallback(
       schedulerPriorityLevel,
       performConcurrentWorkOnRoot.bind(null, root),
@@ -1235,12 +1239,15 @@ export function discreteUpdates<A, B, C, D, R>(
 }
 
 export function unbatchedUpdates<A, R>(fn: (a: A) => R, a: A): R {
+  // ! 这里是对上下文的处理，不必纠结
   const prevExecutionContext = executionContext;
   executionContext &= ~BatchedContext;
   executionContext |= LegacyUnbatchedContext;
   try {
+    // ! 重点在这里，直接调用了传入的回调函数 fn，对应当前链路中的 updateContainer 方法
     return fn(a);
   } finally {
+    // ! finally 逻辑里是对回调队列的处理
     executionContext = prevExecutionContext;
     if (executionContext === NoContext) {
       // Flush the immediate callbacks that were scheduled during this batch
@@ -1692,6 +1699,7 @@ function performUnitOfWork(unitOfWork: Fiber): void {
   const current = unitOfWork.alternate;
   setCurrentDebugFiberInDEV(unitOfWork);
 
+  // ! 新建 Fiber 节点 创建当前节点的子节点
   let next;
   if (enableProfilerTimer && (unitOfWork.mode & ProfileMode) !== NoMode) {
     startProfilerTimer(unitOfWork);
@@ -1707,7 +1715,7 @@ function performUnitOfWork(unitOfWork: Fiber): void {
     // If this doesn't spawn new work, complete the current work.
     completeUnitOfWork(unitOfWork);
   } else {
-    workInProgress = next;
+    workInProgress = next; // ! 将新的 Fiber 节点赋值给 workInProgress
   }
 
   ReactCurrentOwner.current = null;
@@ -1776,12 +1784,17 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
         // Skip both NoWork and PerformedWork tags when creating the effect
         // list. PerformedWork effect is read by React DevTools but shouldn't be
         // committed.
+        // ! 若副作用类型的值大于 “PerformedWork”，则说明这里存在一个需要记录的副作用
         if ((flags & ~StaticMask) > PerformedWork) {
+          // ! returnFiber 是当前节点的父节点
           if (returnFiber.lastEffect !== null) {
+            // ! 若父节点的 effectList 不为空，则将当前节点追加到 effectList 的末尾去
             returnFiber.lastEffect.nextEffect = completedWork;
           } else {
+            // ! 若父节点的 effectList 为空，则当前节点就是 effectList 的 firstEffect
             returnFiber.firstEffect = completedWork;
           }
+          // ! 将 effectList 的 lastEffect 指针后移一位
           returnFiber.lastEffect = completedWork;
         }
       }
@@ -1829,15 +1842,18 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
       }
     }
 
+    // ! 获取当前节点的兄弟节点
     const siblingFiber = completedWork.sibling;
     if (siblingFiber !== null) {
       // If there is more work to do in this returnFiber, do that next.
-      workInProgress = siblingFiber;
-      return;
+      workInProgress = siblingFiber; // ! 将 workInProgress 赋值为当前节点的兄弟节点
+      return; // ! 将正在进行的 completeUnitOfWork 逻辑 return 掉
     }
     // Otherwise, return to the parent
+    // ! 若兄弟节点不存在，completeWork 会被赋值为 returnFiber，也就是当前节点的父节点
     completedWork = returnFiber;
     // Update the next thing we're working on in case something throws.
+    // ! 这一步与上一步是相辅相成的，上下文中要求 workInProgress 与 completedWork 保持一致
     workInProgress = completedWork;
   } while (completedWork !== null);
 
